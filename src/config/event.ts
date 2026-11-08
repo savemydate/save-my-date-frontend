@@ -8,7 +8,7 @@ export const EVENT_CONFIG: EventConfig = {
   couple: {
     bride: "Sofía",
     groom: "Alejandro",
-    title: "Sofía & Alejandro",
+    title: "Sofía & Almejandro",
   },
   date: {
     iso: "2026-11-20T17:00:00",

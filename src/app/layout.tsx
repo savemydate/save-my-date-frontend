@@ -17,14 +17,13 @@ const plusJakartaSans = Plus_Jakarta_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Nuestra Boda | Invitación",
-  description: "Acompáñanos a celebrar este día tan especial con nosotros.",
+  title: "Save My Date | Plataforma de Invitaciones Digitales",
+  description: "Crea, comparte y administra tus invitaciones interactivas para bodas y eventos especiales.",
 };
 
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
-  maximumScale: 1,
 };
 
 export default function RootLayout({
@@ -37,7 +36,7 @@ export default function RootLayout({
       lang="es"
       className={`${cormorantGaramond.variable} ${plusJakartaSans.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col font-sans bg-ivory text-charcoal">
+      <body className="min-h-full flex flex-col font-sans antialiased">
         {children}
       </body>
     </html>
