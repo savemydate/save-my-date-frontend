@@ -291,47 +291,61 @@ export async function apiClient<T>(
 - **Puerto de desarrollo:** `3000` (`http://localhost:3000`)
 - **Backend objetivo:** `save-my-date-backend` en `http://localhost:8080` (API v1)
 
-### 10.2. Componentes y Módulos Implementados (Fases 1, 2 y Desacoplamiento de Arquitectura Admin)
-1. **Configuración del Evento (`src/config/event.ts`):** Objeto `EVENT_CONFIG` con información de la pareja, fechas, ceremonia, recepción, código de vestimenta y datos bancarios.
+### 10.2. Componentes y Módulos Implementados (Fases 1, 2, Desacoplamiento Admin, Fase 3 RSVP y Fase 4 Previews/Admin)
+1. **Configuración del Evento y Entorno (`src/config/`):**
+   - `src/config/event.ts`: Objeto `EVENT_CONFIG` con información de la pareja, fechas, ceremonia, recepción, código de vestimenta y datos bancarios.
+   - `src/config/env.ts`: Validación tipada de variables de entorno públicas y de servidor (`API_URL`, `APP_URL`).
 2. **Definiciones de Tipos (`src/types/`):**
+   - `src/types/api.ts`: Contrato de respuestas tipadas `ApiResponse<T>`, `ApiSuccessResponse<T>`, `ApiErrorResponse`, `ApiErrorDetail`.
    - `src/types/event.ts`: Interfaces para `EventConfig`, ubicaciones, tiendas y cuentas bancarias.
    - `src/types/rsvp.ts`: Interfaces para `RsvpSubmission` y `RsvpFormData`.
    - `src/types/admin.ts`: Modelos de administración (`AdminEventSummary`, `DashboardStats`, estados de evento).
    - `src/types/auth.ts`: Modelos de sesión preparados para Google SSO (`AdminUser`, `AuthStatus`, `AuthSession`).
-3. **Utilidades Base (`src/lib/`):**
+3. **Capa de Servicios de Red (`src/services/api/`):**
+   - `src/services/api/client.ts`: Cliente HTTP defensivo con timeout de 8s, `AbortController`, inyección de encabezado `X-Request-ID` y tipado seguro.
+   - `src/services/api/rsvp.ts`: Servicio de dominio RSVP (`submitRsvp`, `getLocalRsvp`, `saveLocalRsvp`, `clearLocalRsvp`, `subscribeRsvp`) con suscripción `useSyncExternalStore` y modo de resiliencia offline/desarrollo.
+4. **Utilidades Base (`src/lib/`):**
    - `src/lib/utils.ts`: Helper `cn(...)` para combinar clases de Tailwind.
-   - `src/lib/confetti.ts`: Helper modular para disparo dinámico de confeti con fuegos artificiales.
+   - `src/lib/confetti.ts`: Helper modular para disparo dinámico de confeti con fuegos artificiales (`fireConfetti`).
    - `src/lib/calendar.ts`: Generador de enlaces para Google Calendar y archivos `.ics` (iCal / Apple Calendar).
-4. **Custom Hooks Reactivos (`src/hooks/`):**
+5. **Custom Hooks Reactivos (`src/hooks/`):**
    - `src/hooks/useCountdown.ts`: Temporizador reactivo SSR-safe con protección contra desincronización de hidratación (`isReady`).
    - `src/hooks/useAudioPlayer.ts`: Controlador de audio con manejo de excepciones y políticas móviles de autoplay.
    - `src/hooks/useClipboard.ts`: Copia al portapapeles con temporizador de estado visual (`copied`, `copy`) y fallback.
-5. **Componentes Atómicos UI (`src/components/ui/`):**
+6. **Componentes Atómicos UI (`src/components/ui/`):**
    - `src/components/ui/Button.tsx`: Botón accesible con área táctil mínima (44x44px) y variantes semánticas.
    - `src/components/ui/Card.tsx`: Contenedor con efecto glassmorphism (`backdrop-blur-md`), bordes dorados y esquinas redondeadas.
-6. **Secciones de la Invitación (`src/components/sections/`):**
-   - `HeroSection.tsx`, `CountdownSection.tsx`, `AudioPlayer.tsx`, `LocationsSection.tsx`, `DressCodeSection.tsx`, `GiftRegistrySection.tsx`.
-7. **Arquitectura de Enrutamiento y Route Groups (`src/app/`):**
+   - `src/components/ui/Input.tsx`: Campos `Input` y `Textarea` con áreas táctiles de 44px, soporte de etiquetas, mensajes de error y `useId` seguro.
+7. **Secciones de la Invitación (`src/components/sections/`):**
+   - `HeroSection.tsx`: Portada nupcial con tipografía Cormorant Garamond y diseño responsivo.
+   - `CountdownSection.tsx`: Contador regresivo en días, horas, minutos y segundos.
+   - `AudioPlayer.tsx`: Reproductor flotante con control de reproducción y políticas móviles.
+   - `LocationsSection.tsx`: Itinerario con enlaces a Google Maps, Waze y sincronización con calendarios (.ics / Google Calendar).
+   - `DressCodeSection.tsx`: Protocolo formal con chips cromáticos.
+   - `GiftRegistrySection.tsx`: Tiendas departamentales y tarjeta de transferencias con copia táctil de CLABE.
+   - `RsvpSection.tsx`: Formulario de confirmación completo con selector táctil Sí/No, contador de pases, chips de restricciones dietéticas, dedicatoria personal, trampa anti-spam (*honeypot*), prevención de doble envío, disparo festivo de confeti y vista de agradecimiento editable con `useSyncExternalStore`.
+8. **Arquitectura de Enrutamiento y Route Groups (`src/app/`):**
    - `src/app/layout.tsx`: RootLayout neutro con fuentes y globals.css sin forzar fondo de boda al resto del sistema.
-   - `src/app/(invitation)/layout.tsx`: Layout especializado de invitaciones públicas (`bg-ivory text-charcoal`, contenedor centrado `max-w-md`).
+   - `src/app/(invitation)/layout.tsx`: Layout especializado de invitaciones públicas (`bg-ivory text-charcoal`, contenedor centrado `max-w-md`), con metadatos OpenGraph y Twitter Cards apuntando a `/api/og`.
    - `src/app/(invitation)/page.tsx`: Vista pública de la invitación respondiendo exactamente en `/`.
+   - `src/app/api/og/route.tsx`: Route Handler dinámico con `next/og` (`ImageResponse`) generando tarjetas nupciales en 1200x630px para WhatsApp y mensajería.
    - `src/app/admin/layout.tsx`: Layout de administración tipo dashboard full-width con navegación lateral y superior.
    - `src/app/admin/page.tsx`: Dashboard administrativo con KPIs de eventos y confirmaciones.
-   - `src/app/admin/events/`, `rsvps/`, `settings/`: Vistas de soporte del panel de administración.
-8. **Componentes de Administración (`src/components/admin/`):**
+   - `src/app/admin/events/`, `settings/`: Vistas de soporte del panel de administración.
+   - `src/app/admin/rsvps/page.tsx`: Panel completo de supervisión de asistencias con KPIs en tiempo real (pases confirmados, declinados, dietas), buscador reactivo, filtros por estado, lectura de mensajes y exportación a CSV (UTF-8 con BOM para Excel).
+9. **Componentes de Administración (`src/components/admin/`):**
    - `AdminSidebar.tsx`: Navegación con drawer móvil, links a subsecciones y switch rápido a la invitación pública.
    - `AdminHeader.tsx`: Barra superior con indicador de backend y perfil listo para Google SSO.
    - `EventSummaryCard.tsx`: Tarjeta de gestión de evento con barra de confirmaciones y copiado de link.
 
 ### 10.3. Lecciones Aprendidas y Estabilidad del Build
-- **Next.js 16 Route Groups:** El uso de `(invitation)` aísla el estilo visual nupcial por completo del panel de administración `/admin`, evitando colisiones y manteniendo la URL `/` idéntica.
-- **Validación Automatizada Superada:** `npx tsc --noEmit` (0 errores), `npm run lint` (0 errores, 0 advertencias), `npm run build` (8/8 rutas estáticas generadas exitosamente).
+- **Next.js 16 Route Groups & ImageResponse:** El endpoint `/api/og` corre sobre Node.js runtime estándar (`runtime = 'edge'` está deprecado en Next.js 16). Satori se maquetó exclusivamente con Flexbox y estilos inline en hexadecimal.
+- **React 19 Hooks Compliance:** Implementación de `useSyncExternalStore` con caché en memoria (`cachedRaw` y `cachedSubmission`) para sincronizar `localStorage` sin disparar renders en cascada ni violar la regla `react-hooks/set-state-in-effect`. Invocación incondicional de `React.useId()` en componentes atómicos.
+- **Validación Automatizada Superada:** `npx tsc --noEmit` (0 errores), `npm run lint` (0 errores, 0 advertencias), `npm run build` (9 rutas compiladas exitosamente, 8 estáticas y 1 dinámica para `/api/og`).
 
-### 10.4. Próximos Pasos en el Roadmap
-- **Fase 3 (Formulario RSVP y Persistencia):**
-  - Implementar cliente HTTP resiliente en `src/services/api/client.ts` para conectar con el backend Go en `/api/v1/rsvp`.
-  - Crear servicio de dominio `src/services/api/rsvp.ts`.
-  - Desarrollar `RsvpSection.tsx` con formulario móvil completo (nombre, acompañantes, confirmación sí/no, restricciones dietéticas, mensaje a los novios).
-  - Integrar protección anti-spam / honeypot y disparo festivo de confeti (`confetti.ts`) al completar el envío.
-- **Fase 4 (Optimización Móvil y Previews):**
-  - Configurar metadatos OpenGraph dinámicos (`og:image`, `og:title`) para vistas previas en WhatsApp y redes.
+### 10.4. Estado del Roadmap
+- **Fase 1 (Fundaciones & Experiencia Nupcial):** Completada ✅
+- **Fase 2 (Multimedia, Protocolo & Mesa de Regalos):** Completada ✅
+- **Desacoplamiento Arquitectónico (Admin / Invitación):** Completada ✅
+- **Fase 3 (Formulario RSVP, Persistencia & Red Resiliente):** Completada ✅
+- **Fase 4 (Optimización Móvil, Previews OpenGraph & Panel RSVP con Exportación CSV):** Completada ✅
